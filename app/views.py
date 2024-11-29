@@ -2,6 +2,7 @@ from django.shortcuts import render,  get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, DeleteView, UpdateView
 from .models import Category, News, Region
 from django.urls import reverse_lazy
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 
 def home_view(request):
     return render(request, "home.html", {
@@ -57,17 +58,26 @@ def detail_page_view(request, pk):
 
     return render(request, 'detail.html', context)
 
-class Create_News(CreateView):
+class Create_News(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = News
     template_name = 'create_news.html'
-    fields = ['category', 'region', 'title', 'text', 'image', 'author']
+    fields = ['category', 'region', 'title', 'text', 'image']
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+    def test_func(self):
+        return self.request.user.is_superuser
 
-class Edit_News(UpdateView): 
+class Edit_News(LoginRequiredMixin, UserPassesTestMixin, UpdateView): 
     model = News
     template_name = 'edit-news.html'
     fields = ['category', 'region', 'title', 'text']
+    
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author== self.request.user
 
-class Delete_News(DeleteView): 
+class Delete_News(LoginRequiredMixin, DeleteView): 
     model = News
     template_name = 'delete-news.html'
     success_url = reverse_lazy('home')
